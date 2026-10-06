@@ -16,7 +16,7 @@ from Task 1 and Task 3.
 
 Write down where it hurts. That is the deliverable.
 """
-import argparse, json, os, platform, time, tracemalloc
+import argparse, json, os, platform, random, time, tracemalloc
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
@@ -41,6 +41,12 @@ def timed(fn, *args):
     return result, elapsed, peak
 
 
+def build_documents(n, seed=246, shingles=60, vocab=5_000):
+    """Build exactly n deterministic documents, including n > 2,120."""
+    rng = random.Random(seed)
+    return [set(rng.sample(range(vocab), shingles)) for _ in range(n)]
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--sizes", default="250,500,1000,2000",
@@ -58,7 +64,7 @@ def main():
 
     rows = []
     for n in [int(x) for x in a.sizes.split(",")]:
-        docs = bench.build()[:n]
+        docs = build_documents(n)
         sim = bench.Counter()
         _, t_brute, m_brute = timed(BruteForce(a.threshold).find, docs, sim)
         c_brute = sim.calls

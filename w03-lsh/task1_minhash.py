@@ -30,7 +30,10 @@ BOOK_HASHES = [lambda r: (r + 1) % 5, lambda r: (3 * r + 1) % 5]
 
 def jaccard(a, b):
     """|a and b| / |a or b|. Empty union is 0, not an error."""
-    raise NotImplementedError("jaccard similarity")
+    union = a | b
+    if not union:
+        return 0
+    return len(a & b) / len(union)
 
 
 def minhash_signatures(columns, hashes, n_rows):
@@ -48,7 +51,17 @@ def minhash_signatures(columns, hashes, n_rows):
     written something correct that does not survive a dataset that does not fit
     in memory, and not fitting in memory is what this course is about.
     """
-    raise NotImplementedError("signature matrix")
+    hashes = list(hashes)
+    n_hashes = len(hashes)
+    signatures = [[float("inf")] * n_hashes for _ in columns]
+    for r in range(n_rows):
+        hash_vals = [h(r) for h in hashes]
+        for c, col in enumerate(columns):
+            if r in col:
+                for h_idx in range(n_hashes):
+                    if hash_vals[h_idx] < signatures[c][h_idx]:
+                        signatures[c][h_idx] = hash_vals[h_idx]
+    return signatures
 
 
 def lsh_candidates(signatures, bands):
@@ -60,7 +73,29 @@ def lsh_candidates(signatures, bands):
     The signature length must divide evenly by `bands`, or you have to decide
     what to do with the remainder. Say what you decided.
     """
-    raise NotImplementedError("LSH candidate pairs")
+    if bands <= 0:
+        raise ValueError("bands must be positive")
+    if not signatures:
+        return set()
+    n_hashes = len(signatures[0])
+    if any(len(sig) != n_hashes for sig in signatures):
+        raise ValueError("all signatures must have the same length")
+    if n_hashes % bands != 0:
+        raise ValueError("signature length must divide evenly by bands")
+
+    rows_per_band = n_hashes // bands
+    buckets = {}
+    candidates = set()
+
+    for col_idx, sig in enumerate(signatures):
+        for b in range(bands):
+            start = b * rows_per_band
+            key = (b, tuple(sig[start:start + rows_per_band]))
+            for earlier in buckets.setdefault(key, []):
+                candidates.add((earlier, col_idx))
+            buckets[key].append(col_idx)
+
+    return candidates
 
 
 # ------------------------------------------------------------------- harness
