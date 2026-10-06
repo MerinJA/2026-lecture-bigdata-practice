@@ -1,0 +1,16 @@
+{
+  "machine": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+    "python": "3.12.6",
+    "total_ram_bytes": 16507727872
+  },
+  "runs": [
+    {"n": 125, "brute_s": 0.05, "brute_calls": 7750, "brute_peak_bytes": 7280, "lsh_s": 0.32, "lsh_calls": 0, "lsh_peak_bytes": 1281692},
+    {"n": 250, "brute_s": 0.18, "brute_calls": 31125, "brute_peak_bytes": 7232, "lsh_s": 0.62, "lsh_calls": 0, "lsh_peak_bytes": 2805084},
+    {"n": 500, "brute_s": 0.71, "brute_calls": 124750, "brute_peak_bytes": 7240, "lsh_s": 1.18, "lsh_calls": 0, "lsh_peak_bytes": 5858780},
+    {"n": 1000, "brute_s": 2.86, "brute_calls": 499500, "brute_peak_bytes": 7184, "lsh_s": 2.40, "lsh_calls": 6, "lsh_peak_bytes": 12103096},
+    {"n": 2000, "brute_s": 11.76, "brute_calls": 1999000, "brute_peak_bytes": 7128, "lsh_s": 4.73, "lsh_calls": 41, "lsh_peak_bytes": 24447456},
+    {"n": 4000, "brute_s": 65.24, "brute_calls": 7998000, "brute_peak_bytes": 7344, "lsh_s": 14.17, "lsh_calls": 135, "lsh_peak_bytes": 49139568}
+  ]
+}
