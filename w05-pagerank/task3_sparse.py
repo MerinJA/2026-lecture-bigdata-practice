@@ -86,10 +86,58 @@ class YourPageRank:
     """
 
     def __init__(self, beta=0.85, tol=1e-10, max_iter=100):
-        raise NotImplementedError("write your PageRank")
+        self.beta = beta
+        self.tol = tol
+        self.max_iter = max_iter
+        self._n = 0
+        self.iterations = 0
 
     def run(self, graph):
-        raise NotImplementedError
+        nodes = list(graph)
+        n = len(nodes)
+        self._n = n
+        if n == 0:
+            return {}
+
+        node_to_idx = {v: i for i, v in enumerate(nodes)}
+        dead_ends = []
+        out_links = []
+        out_degrees = []
+
+        for v in nodes:
+            outs = graph[v]
+            deg = len(outs)
+            out_degrees.append(deg)
+            if deg == 0:
+                dead_ends.append(len(out_links))
+                out_links.append([])
+            else:
+                out_links.append([node_to_idx[w] for w in outs])
+
+        r = [1.0 / n] * n
+        beta = self.beta
+        teleport = (1.0 - beta) / n
+
+        for it in range(1, self.max_iter + 1):
+            self.iterations = it
+            dead_sum = sum(r[i] for i in dead_ends)
+            base = teleport + (beta * dead_sum) / n
+            nr = [base] * n
+
+            for src in range(n):
+                deg = out_degrees[src]
+                if deg > 0:
+                    share = (beta * r[src]) / deg
+                    for dst in out_links[src]:
+                        nr[dst] += share
+
+            delta = sum(abs(a - b) for a, b in zip(nr, r))
+            r = nr
+            if delta < self.tol:
+                break
+
+        return {nodes[i]: r[i] for i in range(n)}
 
     def memory_floats(self):
-        raise NotImplementedError
+        # Peak float memory: two rank vectors (r and nr) of size n
+        return 2 * self._n
