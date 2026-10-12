@@ -13,7 +13,7 @@ approximating.
 
     python3 task1_sketches.py --verify
 """
-import argparse, random
+import argparse, hashlib, math, random
 
 
 class BloomFilter:
@@ -28,13 +28,22 @@ class BloomFilter:
     """
 
     def __init__(self, m, k, seed=246):
-        raise NotImplementedError("write the Bloom filter")
+        self.m, self.k, self.seed = m, k, seed
+        self.bits = bytearray((m + 7) // 8)
+
+    def _indices(self, item):
+        digest = hashlib.blake2b(str(item).encode(), digest_size=16,
+                                 key=str(self.seed).encode()).digest()
+        h1, h2 = int.from_bytes(digest[:8], "big"), int.from_bytes(digest[8:], "big") or 1
+        for i in range(self.k):
+            yield (h1 + i * h2) % self.m
 
     def add(self, item):
-        raise NotImplementedError
+        for index in self._indices(item):
+            self.bits[index // 8] |= 1 << (index % 8)
 
     def __contains__(self, item):
-        raise NotImplementedError
+        return all(self.bits[index // 8] & (1 << (index % 8)) for index in self._indices(item))
 
     def expected_fp_rate(self, n_inserted):
         """The textbook's predicted false-positive rate after n insertions.
@@ -42,7 +51,7 @@ class BloomFilter:
         §4.4.2 derives it. Return the number, do not measure it - the harness
         measures separately and compares the two.
         """
-        raise NotImplementedError
+        return (1 - math.exp(-self.k * n_inserted / self.m)) ** self.k
 
 
 def flajolet_martin(stream, n_hashes=64, seed=246):
@@ -67,7 +76,30 @@ def flajolet_martin(stream, n_hashes=64, seed=246):
 
     Return your estimate as a float.
     """
-    raise NotImplementedError("write Flajolet-Martin")
+    import hashlib
+    mask = (1 << 64) - 1
+
+    def mix64(value):
+        value = (value + 0x9E3779B97F4A7C15) & mask
+        value = ((value ^ (value >> 30)) * 0xBF58476D1CE4E5B9) & mask
+        value = ((value ^ (value >> 27)) * 0x94D049BB133111EB) & mask
+        return value ^ (value >> 31)
+
+    maxima = [0] * n_hashes
+    salts = [(seed + 0x9E3779B97F4A7C15 * (i + 1)) & mask for i in range(n_hashes)]
+
+    for item in stream:
+        raw = str(item).encode("utf-8")
+        value = int.from_bytes(hashlib.md5(raw).digest()[:8], "little")
+        for index, salt in enumerate(salts):
+            hashed = mix64(value ^ salt)
+            zeros = 64 if hashed == 0 else (hashed & -hashed).bit_length() - 1
+            if zeros > maxima[index]:
+                maxima[index] = zeros
+
+    maxima.sort()
+    med_r = (maxima[n_hashes // 2 - 1] + maxima[n_hashes // 2]) / 2.0
+    return float((2.0 ** med_r) / 0.77351)
 
 
 def reservoir_sample(stream, k, seed=246):
@@ -78,7 +110,15 @@ def reservoir_sample(stream, k, seed=246):
 
     Return a list of k items (or fewer if the stream was shorter).
     """
-    raise NotImplementedError("write reservoir sampling")
+    rng, reservoir = random.Random(seed), []
+    for index, item in enumerate(stream):
+        if index < k:
+            reservoir.append(item)
+        else:
+            replacement = rng.randrange(index + 1)
+            if replacement < k:
+                reservoir[replacement] = item
+    return reservoir
 
 
 # ------------------------------------------------------------------- harness
