@@ -76,7 +76,46 @@ class YourAlgorithm:
     """
 
     def __init__(self, support):
-        raise NotImplementedError("write your algorithm")
+        self.support = support
+        self.peak_counters = 0
 
     def run(self, baskets):
-        raise NotImplementedError
+        # PCY algorithm with bucket hashing in Pass 1, collapsed to a bitmap for Pass 2
+        num_buckets = 1_000_003
+        item_counts = Counter()
+        buckets = [0] * num_buckets
+
+        # Pass 1: count items and hash pairs to buckets
+        for basket in baskets:
+            item_counts.update(basket)
+            items = sorted(basket)
+            n_items = len(items)
+            for i in range(n_items):
+                ai = items[i] * 2003
+                for j in range(i + 1, n_items):
+                    h = (ai + items[j] * 997) % num_buckets
+                    buckets[h] += 1
+
+        frequent = {i for i, c in item_counts.items() if c >= self.support}
+        # Collapse buckets into a compact bitmap (bytearray) before Pass 2
+        bitmap = bytearray(1 if c >= self.support else 0 for c in buckets)
+        del buckets
+
+        # Pass 2: count pairs of frequent items only if their bucket is frequent
+        pair_counts = Counter()
+        self.peak_counters = 0
+
+        for basket in baskets:
+            items = sorted(basket & frequent)
+            n_items = len(items)
+            for i in range(n_items):
+                ai = items[i] * 2003
+                for j in range(i + 1, n_items):
+                    h = (ai + items[j] * 997) % num_buckets
+                    if bitmap[h]:
+                        pair_counts[(items[i], items[j])] += 1
+            if len(pair_counts) > self.peak_counters:
+                self.peak_counters = len(pair_counts)
+
+        return {frozenset(p): c for p, c in pair_counts.items()
+                if c >= self.support}

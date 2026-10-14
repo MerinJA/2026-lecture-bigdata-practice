@@ -14,6 +14,7 @@ smaller second pass, and the whole chapter is consequences of that trade.
     python3 task1_apriori.py --verify
 """
 import argparse
+from collections import Counter
 from itertools import combinations
 
 # Small enough to check by hand. support threshold 3 unless stated.
@@ -30,7 +31,11 @@ BASKETS = [
 
 def frequent_singletons(baskets, support):
     """Items appearing in at least `support` baskets. Return {item: count}."""
-    raise NotImplementedError("pass one")
+    counts = Counter()
+    for basket in baskets:
+        for item in set(basket):
+            counts[item] += 1
+    return {item: c for item, c in counts.items() if c >= support}
 
 
 def frequent_pairs(baskets, support):
@@ -44,7 +49,16 @@ def frequent_pairs(baskets, support):
     A-Priori exists to avoid, and it will pass this harness while failing the
     point. Task 3 measures whether you actually did it.
     """
-    raise NotImplementedError("pass two")
+    singles = frequent_singletons(baskets, support)
+    frequent_items = set(singles)
+
+    pair_counts = Counter()
+    for basket in baskets:
+        surviving = sorted(set(basket) & frequent_items)
+        for a, b in combinations(surviving, 2):
+            pair_counts[frozenset({a, b})] += 1
+
+    return {p: c for p, c in pair_counts.items() if c >= support}
 
 
 def association_rules(baskets, support, min_confidence):
@@ -60,7 +74,28 @@ def association_rules(baskets, support, min_confidence):
     rule with high confidence and lift near 1 tells you nothing - the consequent
     was common anyway - and §6.1.3 is about why that matters more than it looks.
     """
-    raise NotImplementedError("rules")
+    singles = frequent_singletons(baskets, support)
+    pairs = frequent_pairs(baskets, support)
+    total_baskets = len(baskets)
+
+    rules = []
+    for pair, pair_sup in pairs.items():
+        items = list(pair)
+        if len(items) != 2:
+            continue
+        i, j = items[0], items[1]
+        for antecedent, consequent in [(i, j), (j, i)]:
+            ant_sup = singles.get(antecedent, 0)
+            cons_sup = singles.get(consequent, 0)
+            if ant_sup > 0 and cons_sup > 0 and total_baskets > 0:
+                conf = pair_sup / ant_sup
+                cons_frac = cons_sup / total_baskets
+                lift = conf / cons_frac
+                if conf >= min_confidence:
+                    rules.append((antecedent, consequent, conf, lift))
+
+    rules.sort(key=lambda r: (-r[2], r[0], r[1]))
+    return rules
 
 
 # ------------------------------------------------------------------- harness
@@ -90,7 +125,7 @@ def verify():
     got = {tuple(sorted(k)): v for k, v in pairs.items()}
     check("frequent pairs at support 3", dict(sorted(got.items())),
           {("beer", "bread"): 3, ("beer", "diaper"): 4, ("beer", "milk"): 3,
-           ("bread", "diaper"): 3, ("bread", "milk"): 4, ("diaper", "milk"): 3})
+            ("bread", "diaper"): 3, ("bread", "milk"): 4, ("diaper", "milk"): 3})
 
     # cola appears twice, so it must never reach pass two
     check("infrequent items excluded from pairs",

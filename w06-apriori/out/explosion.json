@@ -1,0 +1,51 @@
+{
+  "runs": [
+    {
+      "support": 400,
+      "frequent_pairs": 249,
+      "peak_counters": 10585,
+      "seconds": 1.2870693000149913,
+      "peak_bytes": 1058719
+    },
+    {
+      "support": 200,
+      "frequent_pairs": 776,
+      "peak_counters": 58626,
+      "seconds": 2.3323784000240266,
+      "peak_bytes": 6383284
+    },
+    {
+      "support": 100,
+      "frequent_pairs": 2244,
+      "peak_counters": 273701,
+      "seconds": 3.969165399990743,
+      "peak_bytes": 26391580
+    },
+    {
+      "support": 50,
+      "frequent_pairs": 6397,
+      "peak_counters": 820259,
+      "seconds": 7.7427479999896605,
+      "peak_bytes": 102173692
+    },
+    {
+      "support": 25,
+      "frequent_pairs": 17045,
+      "peak_counters": 893456,
+      "seconds": 8.583566299988888,
+      "peak_bytes": 102173492
+    },
+    {
+      "support": 12,
+      "frequent_pairs": 43116,
+      "peak_counters": 893456,
+      "seconds": 8.140564999979688,
+      "peak_bytes": 102829959
+    }
+  ],
+  "machine": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+    "python": "3.12.6"
+  }
+}
