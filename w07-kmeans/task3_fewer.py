@@ -81,7 +81,90 @@ class YourKMeans:
     """
 
     def __init__(self, k, max_iter=50):
-        raise NotImplementedError("write your k-means")
+        self.k, self.max_iter = k, max_iter
+        self.iterations = 0
 
     def run(self, points, initial_centroids, distance):
-        raise NotImplementedError
+        k = self.k
+        n = len(points)
+        centroids = [tuple(c) for c in initial_centroids]
+        labels = [0] * n
+        u = [0.0] * n
+        l = [[0.0] * k for _ in range(n)]
+
+        # Initial pass: compute exact distance from each point to every centroid
+        for i, p in enumerate(points):
+            best_d, best_j = float("inf"), 0
+            for j, c in enumerate(centroids):
+                dist = distance(p, c)
+                l[i][j] = dist
+                if dist < best_d - 1e-12:
+                    best_d, best_j = dist, j
+            labels[i] = best_j
+            u[i] = best_d
+
+        for it in range(1, self.max_iter + 1):
+            self.iterations = it
+            new_centroids = _means(points, labels, k, centroids)
+
+            # Distances each centroid moved
+            deltas = [distance(c, nc) for c, nc in zip(centroids, new_centroids)]
+            if max(deltas) < 1e-12:
+                centroids = new_centroids
+                break
+
+            # Precompute pairwise distances between all centroids
+            c_dist = [[0.0] * k for _ in range(k)]
+            s = [float("inf")] * k
+            for j1 in range(k):
+                for j2 in range(j1 + 1, k):
+                    cd = distance(new_centroids[j1], new_centroids[j2])
+                    c_dist[j1][j2] = cd
+                    c_dist[j2][j1] = cd
+                    if cd < s[j1]:
+                        s[j1] = cd
+                    if cd < s[j2]:
+                        s[j2] = cd
+            s = [0.5 * val for val in s]
+
+            # Update upper and lower bounds based on centroid movement
+            for i in range(n):
+                u[i] += deltas[labels[i]]
+                for j in range(k):
+                    l[i][j] = max(0.0, l[i][j] - deltas[j])
+
+            centroids = new_centroids
+            changed = False
+
+            for i, p in enumerate(points):
+                cur = labels[i]
+                # Test 1: if upper bound <= half distance to nearest other centroid
+                if u[i] <= s[cur]:
+                    continue
+
+                r = True  # whether u[i] is an upper bound rather than exact
+                for j in range(k):
+                    if j == cur:
+                        continue
+                    if u[i] <= l[i][j] or u[i] <= 0.5 * c_dist[cur][j]:
+                        continue
+                    if r:
+                        exact_d = distance(p, centroids[cur])
+                        u[i] = exact_d
+                        l[i][cur] = exact_d
+                        r = False
+                        if exact_d <= l[i][j] or exact_d <= 0.5 * c_dist[cur][j]:
+                            continue
+
+                    dist = distance(p, centroids[j])
+                    l[i][j] = dist
+                    if dist < u[i] - 1e-12:
+                        cur = j
+                        labels[i] = j
+                        u[i] = dist
+                        changed = True
+
+            if not changed:
+                break
+
+        return labels, centroids

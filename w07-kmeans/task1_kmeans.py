@@ -22,7 +22,7 @@ BLOBS = [(0.0, 0.0), (0.2, 0.1), (0.1, 0.2),
 
 def euclidean(a, b):
     """Distance between two points of any dimension."""
-    raise NotImplementedError("distance")
+    return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
 
 
 def assign(points, centroids):
@@ -30,16 +30,43 @@ def assign(points, centroids):
 
     Ties go to the lower index, so that everybody's answer is the same.
     """
-    raise NotImplementedError("assignment step")
+    labels = []
+    for p in points:
+        best_d = float("inf")
+        best_j = 0
+        for j, c in enumerate(centroids):
+            d = euclidean(p, c)
+            if d < best_d:
+                best_d = d
+                best_j = j
+        labels.append(best_j)
+    return labels
 
 
-def update(points, labels, k):
+def update(points, labels, k, previous=None):
     """Move each centroid to the mean of its points.
 
     An empty cluster has no mean. Decide what you do - and say so, because the
     choice changes the result and there is more than one defensible answer.
+    Here, if a cluster becomes empty, we retain its previous centroid location.
     """
-    raise NotImplementedError("update step")
+    dim = len(points[0]) if points else 0
+    centroids = []
+    for j in range(k):
+        group = [p for p, l in zip(points, labels) if l == j]
+        if group:
+            centroids.append(tuple(sum(coord) / len(group) for coord in zip(*group)))
+        elif previous is not None and j < len(previous):
+            centroids.append(previous[j])
+        else:
+            centroids.append((0.0,) * dim)
+    return centroids
+
+
+def sse_of(points, labels, centroids):
+    """Sum of squared distances from each point to its assigned centroid."""
+    return sum(sum((x - y) ** 2 for x, y in zip(p, centroids[l]))
+               for p, l in zip(points, labels))
 
 
 def kmeans(points, k, init="random", seed=246, max_iter=100):
@@ -56,12 +83,39 @@ def kmeans(points, k, init="random", seed=246, max_iter=100):
 
     Set `kmeans.iterations` to how many passes you used.
     """
-    raise NotImplementedError("k-means")
+    rng = random.Random(seed)
+    n = len(points)
+    if k <= 0 or n == 0:
+        kmeans.iterations = 0
+        return [], [], 0.0
 
+    if init == "random":
+        centroids = [tuple(p) for p in rng.sample(points, k)]
+    elif init == "++":
+        centroids = [tuple(rng.choice(points))]
+        while len(centroids) < k:
+            weights = []
+            for p in points:
+                d_sq = min(sum((x - y) ** 2 for x, y in zip(p, c)) for c in centroids)
+                weights.append(d_sq)
+            next_c = rng.choices(points, weights=weights, k=1)[0]
+            centroids.append(tuple(next_c))
+    else:
+        raise ValueError(f"Unknown init method: {init}")
 
-def sse_of(points, labels, centroids):
-    """Sum of squared distances from each point to its assigned centroid."""
-    raise NotImplementedError("sse")
+    labels = [None] * n
+    iters = 0
+    for it in range(1, max_iter + 1):
+        iters = it
+        new_labels = assign(points, centroids)
+        if new_labels == labels:
+            break
+        labels = new_labels
+        centroids = update(points, labels, k, previous=centroids)
+
+    kmeans.iterations = iters
+    sse = sse_of(points, labels, centroids)
+    return labels, centroids, sse
 
 
 # ------------------------------------------------------------------- harness
